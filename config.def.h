@@ -8,28 +8,39 @@ static const int sloppyfocus               = 1;  /* focus follows mouse */
 static const int bypass_surface_visibility = 0;  /* 1 means idle inhibitors will disable idle tracking even if it's surface isn't visible  */
 static const int smartgaps                 = 0;  /* 1 means no outer gap when there is only one window */
 static const int monoclegaps               = 0;  /* 1 means outer gaps in monocle layout */
-static const unsigned int borderpx         = 1;  /* border pixel of windows */
+static const unsigned int borderpx         = 2;  /* border pixel of windows */
 static const unsigned int gappih           = 10; /* horiz inner gap between windows */
 static const unsigned int gappiv           = 10; /* vert inner gap between windows */
 static const unsigned int gappoh           = 10; /* horiz outer gap between windows and screen edge */
 static const unsigned int gappov           = 10; /* vert outer gap between windows and screen edge */
 static const int showbar                   = 1; /* 0 means no bar */
 static const int topbar                    = 1; /* 0 means bottom bar */
-static const char *fonts[]                 = {"monospace:size=10"};
+static const int resizehints               = 0; /* 1 means respect size hints in tiled resizals */
+
+static const char *fonts[] = {
+    "Iosevka NFM:pixelsize=13:antialias=true:autohint=true"};
 static const float rootcolor[]             = COLOR(0x000000ff);
+
 /* This conforms to the xdg-protocol. Set the alpha to zero to restore the old behavior */
 static const float fullscreen_bg[]         = {0.0f, 0.0f, 0.0f, 1.0f}; /* You can also use glsl colors */
 
+/* Black Metal Immortal Color Scheme */
+static const uint32_t col_gray1 = 0x000000FF;
+static const uint32_t col_gray2 = 0x7799BBFF;
+static const uint32_t col_gray3 = 0xC1C1C1FF;
+static const uint32_t col_gray4 = 0x444444FF;
+static const uint32_t col_cyan = 0xA7C080FF;
+
 static uint32_t colors[][3]                = {
 	/*               fg          bg          border    */
-	[SchemeNorm] = { 0xbbbbbbff, 0x222222ff, 0x444444ff },
-	[SchemeSel]  = { 0xeeeeeeff, 0x005577ff, 0x005577ff },
+	[SchemeNorm] = { col_gray3,  col_gray1,  col_gray1 },
+	[SchemeSel]  = { col_gray3,  col_gray4,  col_gray4 },
 	[SchemeUrg]  = { 0,          0,          0x770000ff },
 };
 
 /* tagging - TAGCOUNT must be no greater than 31 */
 #define TAGCOUNT (7)
-static char *tags[] = { "1", "2", "3", "4", "5", "6", "7"};
+static char *tags[] = {"", "", "", "󰒱", "", "󰇮", ""};
 
 /* logging */
 static int log_level = WLR_ERROR;
@@ -40,6 +51,7 @@ static const Rule rules[] = {
 	/* examples: */
 	{ "Gimp_EXAMPLE",     NULL,       0,            1,           -1 }, /* Start on currently visible tags floating, not tiled */
 	{ "firefox_EXAMPLE",  NULL,       1 << 8,       0,           -1 }, /* Start on ONLY tag "9" */
+	{ "discord",          NULL,       3,            0,           -1 }, /* Start on ONLY tag "9" */
 };
 
 /* layout(s) */
@@ -136,13 +148,25 @@ static const enum libinput_config_tap_button_map button_map = LIBINPUT_CONFIG_TA
 
 /* commands */
 static const char *termcmd[] = { "ghostty", NULL };
-static const char *menucmd[] = { "wmenu-run", NULL };
+static const char *menucmd[] = { "wmenu-run", "-N", "000000", "-n", "C1C1C1", "-S", "7799BB", "-s", "000000", NULL };
 static const char *browsercmd[] = { "brave", NULL };
 static const char *spotifycmd[] = { "spotify", "--enable-features=UseOzonePlatform", "--ozone-platform=wayland", "--enable-wayland-ime", NULL };
+static const char *volumeupcmd[] = {"pamixer", "-i", "2", NULL};
+static const char *volumedowncmd[] = {"pamixer", "-d", "2", NULL};
+static const char *volumemutecmd[] = {"pamixer", "-t", NULL};
+static const char *nextsongcmd[] = {"playerctl", "--player=spotify", "next", NULL};
+static const char *prevsongcmd[] = {"playerctl", "--player=spotify", "previous", NULL};
+static const char *playsongcmd[] = {"playerctl", "--player=spotify", "play-pause", NULL};
 
 static const Key keys[] = {
 	/* Note that Shift changes certain key codes: c -> C, 2 -> at, etc. */
 	/* modifier                  key                 function        argument */
+  {0,                          XKB_KEY_XF86AudioRaiseVolume, spawn, {.v = volumeupcmd}},
+  {0,                          XKB_KEY_XF86AudioLowerVolume, spawn, {.v = volumedowncmd}},
+  {0,                          XKB_KEY_XF86AudioMute, spawn, {.v = volumemutecmd}},
+  {0,                          XKB_KEY_XF86AudioNext, spawn, {.v = nextsongcmd}},
+  {0,                          XKB_KEY_XF86AudioPrev, spawn, {.v = prevsongcmd}},
+  {0,                          XKB_KEY_XF86AudioPlay, spawn, {.v = playsongcmd}},
 	{ MODKEY,                    XKB_KEY_space,      spawn,          {.v = menucmd} },
 	{ MODKEY|WLR_MODIFIER_SHIFT, XKB_KEY_Return,     spawn,          {.v = termcmd} },
 	{ MODKEY|WLR_MODIFIER_SHIFT, XKB_KEY_B,          spawn,          {.v = browsercmd} },

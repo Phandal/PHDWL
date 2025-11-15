@@ -1,0 +1,158 @@
+#!/bin/bash
+
+interval=0
+battery_alert=0
+
+battery() {
+  bat_val=$(cat /sys/class/power_supply/BAT0/capacity)
+  
+  if [[ bat_val -eq 100 ]]; then
+    printf " 󰁹 BATT:"
+  elif [[ $bat_val -ge 90 ]]; then
+    printf " 󰂂 BATT:"
+  elif [[ $bat_val -ge 80 ]]; then
+    printf " 󰂁 BATT:"
+  elif [[ $bat_val -ge 70 ]]; then
+    printf " 󰂀 BATT:"
+  elif [[ $bat_val -ge 60 ]]; then
+    printf " 󰁿 BATT:"
+  elif [[ $bat_val -ge 50 ]]; then
+    printf " 󰁾 BATT:"
+  elif [[ $bat_val -ge 40 ]]; then
+    printf " 󰁽 BATT:"
+  elif [[ $bat_val -ge 30 ]]; then
+    printf " 󰁼 BATT:"
+  elif [[ $bat_val -ge 20 ]]; then
+    printf " 󰁻 BATT:"
+  elif [[ $bat_val -ge 10 ]]; then
+    printf " 󰁺 BATT:"
+  else
+    printf " 󰂎 BATT:"
+  fi
+
+  printf " $bat_val%%"
+}
+
+cpu() {
+	cpu_val=$(grep -o "^[^ ]*" /proc/loadavg)
+
+ 	printf "  CPU:"
+	printf " $cpu_val"
+}
+
+sound() {
+  volume=$(pamixer --get-volume-human)
+  muted=${volume::-1}
+  if [ "$muted" == "mute" ]; then
+    printf " 󰸈 VOL:"
+  else
+    printf " 󰕾 VOL:"
+  fi
+  printf " %s" "$volume"
+}
+
+pkg_updates() {
+	updates=$(checkupdates | wc -l)   # arch , needs pacman contrib
+
+	if [ "$updates" == "0" ]; then
+		printf "  Fully Updated"
+	else
+		printf "  $updates"" updates"
+	fi
+}
+
+mem() {
+	printf "  MEM:"
+	printf " $(free -h | awk '/^Mem/ { print $3 }' | sed s/i//g)"
+}
+
+wlan() {
+  printf " 󰈁 ETH:";
+	case "$(cat /sys/class/net/en*/operstate 2>/dev/null)" in
+	up) printf " Connected";;
+	down) printf " Disconnected";;
+	esac
+}
+
+internet() {
+  ethStatus="down"
+  eth=$(cat /sys/class/net/en*/operstate 2> /dev/null)
+  eth=($eth)
+  for eStat in "${eth[@]}"
+  do
+    if [ "$eStat" == "up" ]; then
+      ethStatus="up"
+    fi
+  done
+
+  if [ "$ethStatus" == "down" ]; then
+    for w in $(cat /sys/class/net/wl*/operstate 2> /dev/null)
+    do
+      if [ "$w" == "up" ]; then
+        wifi=$w
+        break
+      fi
+    done
+    if [ "$wifi" == "up" ]; then
+      wifi=$(iwgetid --raw)
+      printf " 󰖩 WIFI:"
+      printf " %s" "$wifi"
+    else
+      printf " 󰖪 WIFI:"
+      printf " Disconnected"
+    fi
+  else
+    printf " 󰈁 ETH:";
+    printf " Connected"
+  fi
+}
+
+clock() {
+	printf " "
+  printf " $(date '+%R')"
+	# printf " $(date '+%I:%M %p') "
+}
+
+day() {
+  printf " "
+  printf " $(date '+%b %e %Y')"
+}
+
+song() {
+  playing=$(playerctl -p spotify status)
+  if [ "$playing" != "Playing" ]; then
+    cur_song="Nothing Playing"
+  else
+    cur_song=$(playerctl -p spotify metadata --format '{{title}} By: {{artist}}')
+  fi
+  printf " 󰓃 Playing:"
+  printf " $cur_song"
+}
+
+disturb() {
+  doNotDisturb=$(dunstctl is-paused)
+  if [ $doNotDisturb == "true" ]; then
+    printf " 󰂛"
+  else
+    printf " 󰂚"
+  fi
+}
+
+while true; do
+	[ $interval = 0 ] || [ $(($interval % 3600)) = 0 ] && updates=$(pkg_updates)
+	interval=$((interval + 1))
+
+  if [[ -d "/sys/class/power_supply/BAT0" ]]; then
+    bat_val=$(cat /sys/class/power_supply/BAT0/capacity)
+    if [[ $battery_alert -eq 0 ]] && [[ $bat_val -le 15 ]]; then
+      battery_alert=1
+      dunstify --urgency=critical "LOW BATTERY!" "Please plug me in!"
+    elif [[ $battery_alert -eq 1 ]] && [[ $bat_val -gt 15 ]]; then
+      battery_alert=0
+    fi
+
+    sleep 1 && echo "$(disturb) | $updates | $(battery) | $(song) | $(internet) | $(cpu) | $(mem) | $(sound) | $(clock) | $(day)"
+  else
+    sleep 1 && echo "$(disturb) | $updates | $(song) | $(internet) | $(cpu) | $(mem) | $(sound) | $(clock) | $(day)"
+  fi
+done
